@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/gen)
 
 # Proto dosyaları
-set(PROTO_FILES proto/example.proto)
+set(PROTO_FILES proto/example.proto proto/sensor.proto)
 
 # nanopb ve protoc yolu
 find_program(PROTOC_EXECUTABLE protoc)

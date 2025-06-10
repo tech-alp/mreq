@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message TemperatureSensor {
+  int32 id = 1;
+  float temperature = 2;
+  uint64 timestamp = 3;
+}
+
+message PressureSensor {
+  int32 id = 1;
+  float pressure = 2;
+  uint64 timestamp = 3;
+}
+
+message ImuSensor {
+  int32 id = 1;
+  float accel_x = 2;
+  float accel_y = 3;
+  float accel_z = 4;
+  float gyro_x = 5;
+  float gyro_y = 6;
+  float gyro_z = 7;
+  uint64 timestamp = 8;
+} 

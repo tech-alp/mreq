@@ -70,7 +70,7 @@ it can be development.
 
 ### 8. Code Generation Workflow
 1. `.proto` added to `proto/`
-2. nanopb generates `.pb.h/.pb.c` into `gen/`
+2. nanopb generates `.pb.h/.pb.c` into `{CMAKE_BINARY_DIR}/gen/`
 3. `proto_registry.py` generates `topic_traits.hpp`, `topic_ids.hpp`
 4. C++ build integrates generated sources via cmake
 
