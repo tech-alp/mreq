@@ -62,6 +62,3 @@ if(APPLE)
 else()
     target_include_directories(mreq_example PRIVATE external/nanopb ${CMAKE_BINARY_DIR}/gen src/mreq)
 endif()
-
-set(CMAKE_C_COMPILER "C:/Users/KAIROS/scoop/apps/mingw/current/bin/gcc.exe")
-set(CMAKE_CXX_COMPILER "C:/Users/KAIROS/scoop/apps/mingw/current/bin/g++.exe")
