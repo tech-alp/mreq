@@ -57,4 +57,11 @@ add_executable(mreq_example main.cpp)
 target_link_libraries(mreq_example PRIVATE mreq)
 add_dependencies(mreq_example generate_pb)
 
-target_include_directories(mreq_example PRIVATE /opt/homebrew/include/nanopb ${CMAKE_BINARY_DIR}/gen)
+if(APPLE)
+    target_include_directories(mreq_example PRIVATE /opt/homebrew/include/nanopb ${CMAKE_BINARY_DIR}/gen src/mreq)
+else()
+    target_include_directories(mreq_example PRIVATE external/nanopb ${CMAKE_BINARY_DIR}/gen src/mreq)
+endif()
+
+set(CMAKE_C_COMPILER "C:/Users/KAIROS/scoop/apps/mingw/current/bin/gcc.exe")
+set(CMAKE_CXX_COMPILER "C:/Users/KAIROS/scoop/apps/mingw/current/bin/g++.exe")
