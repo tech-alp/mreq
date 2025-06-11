@@ -1,26 +1,45 @@
 #pragma once
-#include <atomic>
-#include <cstring>
-
-// Topic<T>: Her mesaj tipi için şablon yapı
-// PRD'ye göre, topic başına tek bir paylaşımlı bellek buffer'ı olacak.
-// Detaylar ileride eklenecek.
+#include <mutex>
+#include <optional>
+#include "subscriber_table.hpp"
 
 template<typename T>
-struct Topic {
-    alignas(T) static inline unsigned char buffer[sizeof(T)];
-    static inline std::atomic<bool> updated = false;
+class Topic {
+    T buffer;
+    size_t sequence = 0;
+    mutable std::mutex mtx;
+    SubscriberTable<T> subscribers;
 
-    static void publish(const T& msg) {
-        std::memcpy(buffer, &msg, sizeof(T));
-        updated.store(true, std::memory_order_release);
+public:
+    void publish(const T& msg) {
+        std::lock_guard<std::mutex> lock(mtx);
+        buffer = msg;
+        ++sequence;
+        subscribers.notify_publish(sequence);
     }
-    static void copy(T& out) {
-        std::memcpy(&out, buffer, sizeof(T));
-        updated.store(false, std::memory_order_release);
+
+    std::optional<size_t> subscribe() {
+        return subscribers.subscribe();
     }
-    static bool check() {
-        return updated.load(std::memory_order_acquire);
+
+    // Modern ve ergonomik read fonksiyonu
+    std::optional<T> read(size_t token) {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (subscribers.check(token, sequence)) {
+            subscribers.update_read_seq(token, sequence);
+            return buffer;
+        }
+        return std::nullopt;
+    }
+
+    
+    void unsubscribe(size_t token) {
+        subscribers.unsubscribe(token);
+    }
+
+    // İsterseniz hala check kullanmak için bırakabilirsin
+    bool check(size_t token) const {
+        std::lock_guard<std::mutex> lock(mtx);
+        return subscribers.check(token, sequence);
     }
 };
-

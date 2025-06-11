@@ -1,42 +1,25 @@
 #pragma once
-
-// interface.hpp: API katmanı
-// publish, subscribe, check, copy fonksiyon prototipleri
-
 #include "topic.hpp"
-#include "topic_traits.hpp"
-#include "subscriber_table.hpp"
-#include <atomic>
-#include <cstring>
-#include <type_traits>
+#include <typeindex>
+#include <map>
+#include <memory>
+#include <mutex>
 
-// TODO: publish<T>, subscribe<T>, check<T>, copy<T> fonksiyon prototipleri
-
-// Sadece şablon prototipleri (örnek implementasyon main.cpp'de olacak)
-
-template<typename T>
-void publish(const T& msg) {
-    Topic<T>::publish(msg);
-    // Tüm abonelere güncelleme işareti
-    for (size_t i = 0; i < SubscriberTable<T>::flags.size(); ++i) {
-        SubscriberTable<T>::set(i);
+// Custom deleter ile unique_ptr: doğru tipten delete yapılır!
+class TopicRegistry {
+    std::map<std::type_index, std::unique_ptr<void, void(*)(void*)>> topics;
+    std::mutex mtx;
+public:
+    template<typename T>
+    Topic<T>& get_topic() {
+        std::lock_guard<std::mutex> lock(mtx);
+        auto idx = std::type_index(typeid(T));
+        if (topics.count(idx) == 0) {
+            topics[idx] = { new Topic<T>(), [](void* ptr){ delete static_cast<Topic<T>*>(ptr); } };
+        }
+        return *reinterpret_cast<Topic<T>*>(topics[idx].get());
     }
-}
+    // Artık destructor'a gerek yok: unique_ptr otomatik temizler.
+};
 
-template<typename T>
-void subscribe(size_t subscriber_idx = 0) {
-    // Gerçek sistemde abone kaydı yapılır, burada gerek yok
-    // Sadece flag temizlenebilir
-    SubscriberTable<T>::clear(subscriber_idx);
-}
-
-template<typename T>
-bool check(size_t subscriber_idx = 0) {
-    return SubscriberTable<T>::check(subscriber_idx);
-}
-
-template<typename T>
-void copy(size_t subscriber_idx, T& out) {
-    Topic<T>::copy(out);
-    SubscriberTable<T>::clear(subscriber_idx);
-}
+inline TopicRegistry topic_registry;
