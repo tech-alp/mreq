@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message ExampleMessage {
-  int32 id = 1;
-  float data = 2;
-} 

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message SensorAccel {
+  uint64 timestamp = 1;
+  uint32 device_id = 2;        // Sensörün benzersiz kimliği
+  float x = 3;
+  float y = 4;
+  float z = 5;
+  float temperature = 6;      // Sensör sicakligi derece
+}

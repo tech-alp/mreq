@@ -5,9 +5,8 @@
 #include <memory>
 #include <mutex>
 
-// Custom deleter ile unique_ptr: doğru tipten delete yapılır!
 class TopicRegistry {
-    std::map<std::type_index, std::unique_ptr<void, void(*)(void*)>> topics;
+    std::map<std::type_index, std::unique_ptr<BaseTopic>> topics;
     std::mutex mtx;
 public:
     template<typename T>
@@ -15,11 +14,10 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         auto idx = std::type_index(typeid(T));
         if (topics.count(idx) == 0) {
-            topics[idx] = { new Topic<T>(), [](void* ptr){ delete static_cast<Topic<T>*>(ptr); } };
+            topics[idx] = std::make_unique<Topic<T>>();
         }
-        return *reinterpret_cast<Topic<T>*>(topics[idx].get());
+        return *static_cast<Topic<T>*>(topics[idx].get());
     }
-    // Artık destructor'a gerek yok: unique_ptr otomatik temizler.
 };
 
 inline TopicRegistry topic_registry;

@@ -3,8 +3,13 @@
 #include <optional>
 #include "subscriber_table.hpp"
 
+class BaseTopic {
+public:
+    virtual ~BaseTopic() = default;
+};
+
 template<typename T>
-class Topic {
+class Topic : public BaseTopic {
     T buffer;
     size_t sequence = 0;
     mutable std::mutex mtx;

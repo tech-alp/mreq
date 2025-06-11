@@ -1,64 +1,51 @@
 cmake_minimum_required(VERSION 3.13)
 project(mreq LANGUAGES CXX)
 
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# gen/ klasörünü build dizininde oluştur
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/gen)
-
-# Proto dosyaları
-set(PROTO_FILES proto/example.proto proto/sensor.proto)
-
-# nanopb ve protoc yolu
-find_program(PROTOC_EXECUTABLE protoc)
-find_program(NANOPB_PLUGIN protoc-gen-nanopb)
-
-if(NOT PROTOC_EXECUTABLE)
-    message(FATAL_ERROR "protoc bulunamadı!")
-endif()
-if(NOT NANOPB_PLUGIN)
-    message(FATAL_ERROR "protoc-gen-nanopb bulunamadı!")
-endif()
-
-# .proto'dan .pb.h/.pb.c üretimi (build/gen dizinine)
-foreach(PROTO ${PROTO_FILES})
-    get_filename_component(PROTO_WE ${PROTO} NAME_WE)
-    add_custom_command(
-        OUTPUT ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.h ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.c
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/gen
-        COMMAND ${PROTOC_EXECUTABLE}
-            --plugin=protoc-gen-nanopb=${NANOPB_PLUGIN}
-            --nanopb_out=${CMAKE_BINARY_DIR}/gen
-            --proto_path=${CMAKE_SOURCE_DIR}/proto
-            ${PROTO_WE}.proto
-        DEPENDS ${PROTO}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/proto
-        COMMENT "${PROTO} dosyasından nanopb kodu üretiliyor"
-    )
-    list(APPEND PB_GENERATED ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.h ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.c)
-endforeach()
-
-add_custom_target(generate_pb ALL DEPENDS ${PB_GENERATED})
-
-# Trait ve registry dosyalarını elle yönetiyoruz
-set(GEN_TRAITS src/mreq/topic_traits.hpp src/mreq/topic_registry.hpp)
+# Include cmake modules
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(GenerateTopicRegistry)
 
 # Kütüphane olarak ekle
 add_library(mreq INTERFACE)
-target_include_directories(mreq INTERFACE src/mreq ${CMAKE_BINARY_DIR}/gen)
-add_dependencies(mreq generate_pb)
+target_include_directories(mreq INTERFACE 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/gen>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/autogen>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/nanopb>
+)
+add_dependencies(mreq generate_pb generate_topic_registry)
+
+add_subdirectory(example)
 
 # FreeRTOS ve nanopb entegrasyonu için örnek (kendi yolunuza göre düzenleyin)
 # target_link_libraries(mreq INTERFACE freertos nanopb)
 
-# Kullanıcıya örnek
-add_executable(mreq_example main.cpp)
-target_link_libraries(mreq_example PRIVATE mreq)
-add_dependencies(mreq_example generate_pb)
+# Install rules
+install(TARGETS mreq
+    EXPORT mreq-targets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
 
-if(APPLE)
-    target_include_directories(mreq_example PRIVATE /opt/homebrew/include/nanopb ${CMAKE_BINARY_DIR}/gen src/mreq)
-else()
-    target_include_directories(mreq_example PRIVATE external/nanopb ${CMAKE_BINARY_DIR}/gen src/mreq)
-endif()
+install(DIRECTORY include/
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MreqConfig.cmake
+    DESTINATION lib/cmake/mreq
+)
+
+# Export targets
+install(EXPORT mreq-targets
+    FILE mreq-targets.cmake
+    NAMESPACE mreq::
+    DESTINATION lib/cmake/mreq
+)

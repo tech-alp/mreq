@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// @topic: sensor_baro sensor_baro_filtered
+
+message SensorBaro {
+  uint64 timestamp = 1;
+  uint32 device_id = 2;        // Sensörün benzersiz kimliği
+  float pressure = 3;          // hPa cinsinden basınç
+  float temperature = 4;       // Santigrat derece
+  float altitude = 5;          // Metre cinsinden yükseklik
+}
