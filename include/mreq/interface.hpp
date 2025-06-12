@@ -1,23 +1,48 @@
 #pragma once
 #include "topic.hpp"
-#include <typeindex>
 #include <map>
+#include <string>
 #include <memory>
-#include <mutex>
+#include "mreq/mutex.hpp"
+#include "mreq/internal/LockGuard.hpp"
 
 class TopicRegistry {
-    std::map<std::type_index, std::unique_ptr<BaseTopic>> topics;
-    std::mutex mtx;
+    std::map<std::string, std::unique_ptr<BaseTopic>> topics;
+    mreq::Mutex mtx;
+    using LockType = mreq::LockGuard<mreq::Mutex>;
+    TopicRegistry() = default;
 public:
+    // Singleton erişim
+    static TopicRegistry& instance() {
+        static TopicRegistry inst;
+        return inst;
+    }
+
+    // Topic'i kaydet (manuel veya otomatik)
     template<typename T>
-    Topic<T>& get_topic() {
-        std::lock_guard<std::mutex> lock(mtx);
-        auto idx = std::type_index(typeid(T));
-        if (topics.count(idx) == 0) {
-            topics[idx] = std::make_unique<Topic<T>>();
+    Topic<T>& register_topic(const std::string& name) {
+        LockType lock(mtx);
+        if (topics.count(name) == 0) {
+            topics[name] = std::make_unique<Topic<T>>();
         }
-        return *static_cast<Topic<T>*>(topics[idx].get());
+        return *static_cast<Topic<T>*>(topics[name].get());
+    }
+
+    // İsimle ve tip güvenli topic erişimi
+    template<typename T>
+    Topic<T>& get_topic(const std::string& name) {
+        LockType lock(mtx);
+        if (topics.count(name) == 0) {
+            // Hata: topic yok
+            while(1); // veya assert(false);
+        }
+        return *static_cast<Topic<T>*>(topics[name].get());
+    }
+
+    // Sadece isimle erişim (tip kontrolü olmadan, örnek kullanım için)
+    BaseTopic* get(const std::string& name) {
+        LockType lock(mtx);
+        if (topics.count(name) == 0) return nullptr;
+        return topics[name].get();
     }
 };
-
-inline TopicRegistry topic_registry;

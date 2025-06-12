@@ -5,33 +5,39 @@
 #include "mreq/interface.hpp"
 
 int main() {
-    std::cout << "[EXAMPLE] Multi-Subscriber Test\n";
-    Topic<TemperatureSensor> temperatureTopic;
+    std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test\n";
+    // 4 elemanlı ring buffer ile topic
+    Topic<TemperatureSensor, 4> temperatureTopic;
 
-    auto loggerToken = temperatureTopic.subscribe();
-    auto uiToken = temperatureTopic.subscribe();
+    // Maksimum abone limiti (MREQ_MAX_SUBSCRIBERS) kadar abone olalım
+    std::array<std::optional<size_t>, MREQ_MAX_SUBSCRIBERS> tokens;
+    for (size_t i = 0; i < MREQ_MAX_SUBSCRIBERS; ++i) {
+        tokens[i] = temperatureTopic.subscribe();
+        assert(tokens[i].has_value());
+    }
+    // Limiti aşan abone subscribe edemez
+    auto overLimit = temperatureTopic.subscribe();
+    assert(!overLimit.has_value());
+    std::cout << "[Multi] Abone limiti testi başarılı.\n";
 
-    TemperatureSensor temp;
-    temp.id = 101;
-    temp.temperature = 25.4f;
-    temp.timestamp = 1234567;
-    temperatureTopic.publish(temp);
+    // Ring buffer'a 4 farklı mesaj yayınla
+    for (int i = 0; i < 4; ++i) {
+        TemperatureSensor temp;
+        temp.id = 100 + i;
+        temp.temperature = 20.0f + i;
+        temp.timestamp = 1000000 + i;
+        temperatureTopic.publish(temp);
+    }
 
-    // Modern read
-    auto loggerVal = temperatureTopic.read(loggerToken.value());
-    auto uiVal = temperatureTopic.read(uiToken.value());
-
-    assert(loggerVal && uiVal);
-    std::cout << "[Multi] logger: " << loggerVal->temperature << ", ui: " << uiVal->temperature << std::endl;
-
-    assert(loggerVal->id == temp.id && loggerVal->temperature == temp.temperature && loggerVal->timestamp == temp.timestamp);
-    assert(uiVal->id == temp.id && uiVal->temperature == temp.temperature && uiVal->timestamp == temp.timestamp);
-
-    assert(!temperatureTopic.read(loggerToken.value()));
-    assert(!temperatureTopic.read(uiToken.value()));
-
-    temperatureTopic.unsubscribe(loggerToken.value());
-    temperatureTopic.unsubscribe(uiToken.value());
-    std::cout << "[EXAMPLE] Multi-Subscriber Test completed successfully.\n";
+    // Her abone en güncel veriyi okuyabilir
+    for (size_t i = 0; i < MREQ_MAX_SUBSCRIBERS; ++i) {
+        auto val = temperatureTopic.read(tokens[i].value());
+        assert(val);
+        std::cout << "[Multi] Abone " << i << ": id=" << val->id << ", temp=" << val->temperature << std::endl;
+        // Okuduktan sonra tekrar okursa veri gelmemeli
+        assert(!temperatureTopic.read(tokens[i].value()));
+        temperatureTopic.unsubscribe(tokens[i].value());
+    }
+    std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test completed successfully.\n";
     return 0;
 } 
