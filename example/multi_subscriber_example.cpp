@@ -1,13 +1,13 @@
 #include <optional>
 #include <iostream>
 #include <cassert>
-#include <sensor.pb.h>
+#include <sensor_temperature.pb.h>
 #include "mreq/interface.hpp"
 
 int main() {
     std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test\n";
     // 4 elemanlı ring buffer ile topic
-    Topic<TemperatureSensor, 4> temperatureTopic;
+    Topic<SensorTemperature, 4> temperatureTopic;
 
     // Maksimum abone limiti (MREQ_MAX_SUBSCRIBERS) kadar abone olalım
     std::array<std::optional<size_t>, MREQ_MAX_SUBSCRIBERS> tokens;
@@ -22,7 +22,7 @@ int main() {
 
     // Ring buffer'a 4 farklı mesaj yayınla
     for (int i = 0; i < 4; ++i) {
-        TemperatureSensor temp;
+        SensorTemperature temp;
         temp.id = 100 + i;
         temp.temperature = 20.0f + i;
         temp.timestamp = 1000000 + i;

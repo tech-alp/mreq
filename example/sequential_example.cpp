@@ -1,16 +1,16 @@
 #include <optional>
 #include <iostream>
 #include <cassert>
-#include <sensor.pb.h>
+#include <sensor_temperature.pb.h>
 #include "mreq/interface.hpp"
 
 int main() {
     std::cout << "[EXAMPLE] Sequential Publish Test\n";
-    Topic<TemperatureSensor> temperatureTopic;
+    Topic<SensorTemperature> temperatureTopic;
     auto temperatureToken = temperatureTopic.subscribe();
 
     for (int i = 0; i < 10; ++i) {
-        TemperatureSensor msg;
+        SensorTemperature msg;
         msg.id = i;
         msg.temperature = i * 1.5f;
         msg.timestamp = 123456789 + i;

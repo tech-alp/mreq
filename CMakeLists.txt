@@ -8,9 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include cmake modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(GenerateTopicRegistry)
+include(PlatformConfig)
 
-# Kütüphane olarak ekle
+# Create main library
 add_library(mreq INTERFACE)
+
+# Configure platform
+configure_platform(mreq)
+
+# Configure include directories
 target_include_directories(mreq INTERFACE 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -18,6 +24,7 @@ target_include_directories(mreq INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/autogen>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/nanopb>
 )
+
 add_dependencies(mreq generate_pb generate_topic_registry)
 
 add_subdirectory(example)

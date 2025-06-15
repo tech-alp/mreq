@@ -89,7 +89,13 @@ def main():
     proto_files = sys.argv[1:-1]
     # Get output directory (last argument)
     output_dir = sys.argv[-1]
+
+    for proto_file in proto_files:
+        if not os.path.exists(proto_file):
+            print(f"Error: Proto file not found: {proto_file}")
+            sys.exit(1)
+    
     generate_registry_code(proto_files, output_dir)
 
 if __name__ == '__main__':
-    main() 
+    main()

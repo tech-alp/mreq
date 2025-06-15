@@ -1,18 +1,18 @@
 #include <optional>
 #include <iostream>
 #include <cassert>
-#include <sensor.pb.h>
+#include <sensor_temperature.pb.h>
 #include "mreq/interface.hpp"
 
 int main() {
     std::cout << "[EXAMPLE] Basic Example TemperatureSensor Test\n";
     
     // Get topic from registry
-    auto& tempTopic = topic_registry.get_topic<TemperatureSensor>();
+    auto& tempTopic = TopicRegistry::instance().get_topic<SensorTemperature>("sensor_temperature");
 
     auto tempToken = tempTopic.subscribe();
 
-    TemperatureSensor msg;
+    SensorTemperature msg;
     msg.id = 42;
     msg.temperature = 36.5f;
     msg.timestamp = 123456789;
@@ -28,4 +28,4 @@ int main() {
     tempTopic.unsubscribe(tempToken.value());
     std::cout << "[EXAMPLE] Basic Example TemperatureSensor Test completed successfully.\n";
     return 0;
-} 
+}
