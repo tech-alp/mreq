@@ -31,9 +31,9 @@ foreach(PROTO ${PROTO_FILES})
             --plugin=protoc-gen-nanopb=${NANOPB_PLUGIN}
             --nanopb_out=${CMAKE_BINARY_DIR}/gen
             --proto_path=${CMAKE_SOURCE_DIR}/proto
-            ${PROTO_WE}.proto
+            ${CMAKE_SOURCE_DIR}/proto/${PROTO_WE}.proto
         DEPENDS ${PROTO}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/proto
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "${PROTO} dosyasından nanopb kodu üretiliyor"
     )
     list(APPEND PB_GENERATED ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.h ${CMAKE_BINARY_DIR}/gen/${PROTO_WE}.pb.c)
@@ -49,12 +49,11 @@ add_library(mreq INTERFACE)
 target_include_directories(mreq INTERFACE src/mreq ${CMAKE_BINARY_DIR}/gen)
 add_dependencies(mreq generate_pb)
 
-# FreeRTOS ve nanopb entegrasyonu için örnek (kendi yolunuza göre düzenleyin)
-# target_link_libraries(mreq INTERFACE freertos nanopb)
+# nanopb headers are included via target_include_directories
 
 # Kullanıcıya örnek
 add_executable(mreq_example main.cpp)
 target_link_libraries(mreq_example PRIVATE mreq)
 add_dependencies(mreq_example generate_pb)
 
-target_include_directories(mreq_example PRIVATE /opt/homebrew/include/nanopb ${CMAKE_BINARY_DIR}/gen)
+target_include_directories(mreq_example PRIVATE /usr/local/include ${CMAKE_BINARY_DIR}/gen)
