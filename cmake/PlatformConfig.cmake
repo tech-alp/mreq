@@ -1,5 +1,5 @@
 # Platform selection options with baremetal as default
-option(MREQ_USE_BAREMETAL "Use baremetal implementation" ON)  # Changed to ON
+option(MREQ_USE_BAREMETAL "Use baremetal implementation" OFF)  # Changed to ON
 option(MREQ_USE_FREERTOS "Use FreeRTOS implementation" OFF)
 option(MREQ_USE_POSIX "Use POSIX implementation" OFF)
 
@@ -29,8 +29,6 @@ function(configure_platform TARGET)
         message(STATUS "Using baremetal platform")
     elseif(MREQ_USE_FREERTOS)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_FREERTOS)
-        find_package(FreeRTOS REQUIRED)
-        target_link_libraries(${TARGET} INTERFACE FreeRTOS)
         message(STATUS "Using FreeRTOS platform")
     elseif(MREQ_USE_POSIX)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_POSIX)

@@ -40,7 +40,7 @@ namespace autogen {
                 if message_match:
                     message_type = message_match.group(1)
                     topic_name = extract_topic_name(content, proto_file)
-                    f.write(f'REGISTER_TOPIC({message_type}, "{topic_name}")\n')
+                    f.write(f'REGISTER_TOPIC({message_type}, "{topic_name}");\n')
         
         f.write("""
 } // namespace autogen
