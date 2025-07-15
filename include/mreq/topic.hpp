@@ -21,7 +21,7 @@ class Topic : public BaseTopic {
     size_t head = 0; // ring buffer için
     mreq::Mutex mtx;
     using LockType = mreq::LockGuard<mreq::Mutex>;
-    SubscriberTable<T> subscribers;
+    mutable SubscriberTable<T> subscribers;
 
 public:
     void publish(const T& msg) {
