@@ -1,4 +1,5 @@
 #include "mreq/internal/NonCopyable.hpp"
+#include "freertos/FreeRTOS.h" // For FreeRTOS types and macros
 
 namespace mreq {
 

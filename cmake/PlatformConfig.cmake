@@ -1,6 +1,6 @@
 # Platform selection options with baremetal as default
-option(MREQ_USE_BAREMETAL "Use baremetal implementation" OFF)  # Changed to ON
-option(MREQ_USE_FREERTOS "Use FreeRTOS implementation" OFF)
+option(MREQ_USE_BAREMETAL "Use baremetal implementation" OFF)
+option(MREQ_USE_FREERTOS "Use FreeRTOS implementation" ON)
 option(MREQ_USE_POSIX "Use POSIX implementation" OFF)
 
 # Validate platform selection
@@ -16,8 +16,8 @@ if(MREQ_USE_POSIX)
 endif()
 
 if(PLATFORM_COUNT EQUAL 0)
-    # If no platform selected, default to baremetal
-    set(MREQ_USE_BAREMETAL ON CACHE BOOL "Use baremetal implementation" FORCE)
+    # If no platform selected, default to FreeRTOS
+    set(MREQ_USE_FREERTOS ON CACHE BOOL "Use FreeRTOS implementation" FORCE)
 elseif(PLATFORM_COUNT GREATER 1)
     message(FATAL_ERROR "Multiple platforms selected. Please enable only one platform.")
 endif()
@@ -30,6 +30,12 @@ function(configure_platform TARGET)
     elseif(MREQ_USE_FREERTOS)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_FREERTOS)
         message(STATUS "Using FreeRTOS platform")
+        # Add FreeRTOS include directories
+        set(FREERTOS_KERNEL_PATH "$ENV{IDF_PATH}/components/freertos/FreeRTOS-Kernel")
+        target_include_directories(${TARGET} INTERFACE
+            $<BUILD_INTERFACE:${FREERTOS_KERNEL_PATH}/include>
+            $<BUILD_INTERFACE:${FREERTOS_KERNEL_PATH}/portable/xtensa/include>
+        )
     elseif(MREQ_USE_POSIX)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_POSIX)
         message(STATUS "Using POSIX platform")
