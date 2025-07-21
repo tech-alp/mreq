@@ -23,8 +23,6 @@ target_include_directories(mreq INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
-add_dependencies(mreq generate_pb generate_topic_registry)
-
 # add_subdirectory(example)
 
 # FreeRTOS ve nanopb entegrasyonu için örnek (kendi yolunuza göre düzenleyin)
