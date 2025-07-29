@@ -29,7 +29,6 @@ class TopicRegistry {
     // yeterince büyük bir aligned_storage kullanacağız.
     // Gerçek bir implementasyonda, her Topic<T> için ayrı bir aligned_storage
     // veya daha sofistike bir bellek havuzu yönetimi gerekebilir.
-    // Şimdilik, BaseTopic'in en büyük türevinin boyutunu ve hizalamasını varsayalım.
     // Bu, Topic<T, N> boyutuna bağlı olacaktır. En kötü durum senaryosu için
     // yeterince büyük bir boyut seçmeliyiz.
     static constexpr size_t MAX_TOPIC_SIZE = sizeof(Topic<int, 100>); // Örnek: En büyük olabilecek bir Topic boyutu

@@ -48,7 +48,6 @@ function(generate_topic_registry PROTO_FILES)
     # Create custom target for topic registry generation
     add_custom_target(generate_topic_registry ALL
         DEPENDS 
-            ${CMAKE_BINARY_DIR}/autogen/topic_registry_autogen.hpp
             ${CMAKE_BINARY_DIR}/autogen/topic_registry_autogen.cpp
     )
 endfunction()

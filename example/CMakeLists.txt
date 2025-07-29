@@ -22,17 +22,16 @@ generate_topic_registry("${PROTO_FILES}")
 
 # Example executables
 add_executable(basic_example basic_example.cpp)
-
-# Generate protobuf files
-generate_protobuf("${PROTO_FILES}" basic_example)
-
-# Link all examples with mreq library
-target_link_libraries(basic_example PRIVATE mreq)
-
 add_executable(multi_subscriber_example multi_subscriber_example.cpp)
 add_executable(sequential_example sequential_example.cpp)
 
+# Generate protobuf files
+generate_protobuf("${PROTO_FILES}" basic_example)
+generate_protobuf("${PROTO_FILES}" multi_subscriber_example)
+generate_protobuf("${PROTO_FILES}" sequential_example)
+
 # Link all examples with mreq library
+target_link_libraries(basic_example PRIVATE mreq)
 target_link_libraries(multi_subscriber_example PRIVATE mreq)
 target_link_libraries(sequential_example PRIVATE mreq)
 
@@ -42,6 +41,6 @@ add_dependencies(multi_subscriber_example generate_topic_registry)
 add_dependencies(sequential_example generate_topic_registry)
 
 # Set include directories for all examples
-target_include_directories(basic_example PRIVATE ${MREQ_INCLUDE_DIRS} ${CMAKE_BINARY_DIR}/autogen)
-target_include_directories(multi_subscriber_example PRIVATE ${MREQ_INCLUDE_DIRS} ${CMAKE_BINARY_DIR}/autogen)
-target_include_directories(sequential_example PRIVATE ${MREQ_INCLUDE_DIRS} ${CMAKE_BINARY_DIR}/autogen) 
+target_include_directories(basic_example PRIVATE ${CMAKE_BINARY_DIR}/autogen ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(multi_subscriber_example PRIVATE ${CMAKE_BINARY_DIR}/autogen ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(sequential_example PRIVATE ${CMAKE_BINARY_DIR}/autogen ${CMAKE_CURRENT_BINARY_DIR})

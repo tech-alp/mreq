@@ -9,16 +9,16 @@
 // Define MREQ_ENABLE_LOGGING to enable basic logging hooks
 // #define MREQ_ENABLE_LOGGING
 
-class BaseTopic {
+class ITopic {
 public:
-    virtual ~BaseTopic() = default;
+    virtual ~ITopic() = default;
 };
 
 // Varsayılan: Tekli buffer, Opsiyonel: Ring buffer
 // N=1: klasik, N>1: ring buffer
 
 template<typename T, size_t N = 1>
-class Topic : public BaseTopic {
+class Topic : public ITopic {
     static_assert(N >= 1, "Buffer boyutu en az 1 olmalı");
     std::array<T, N> buffer{};
     size_t sequence = 0; // Total number of messages published

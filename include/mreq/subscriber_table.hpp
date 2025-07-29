@@ -54,10 +54,6 @@ public:
         }
     }
 
-    // Publisher tarafından çağrılır, ancak polling tabanlı sistemde SubscriberTable'ın doğrudan bir işlevi yoktur.
-    // Sadece mutex koruması altında bir işlem yapılması gerekiyorsa kullanılabilir.
-    // Mevcut durumda boş bir döngü içeriyor, bu kaldırılabilir veya amacı netleştirilmelidir.
-
     // Abone için yeni veri olup olmadığını kontrol eder
     // current_topic_seq: Topic'in en son yayınladığı mesajın sequence numarası
     bool check(size_t idx, size_t current_topic_seq) noexcept {
