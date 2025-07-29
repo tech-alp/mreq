@@ -9,9 +9,15 @@
 // Define MREQ_ENABLE_LOGGING to enable basic logging hooks
 // #define MREQ_ENABLE_LOGGING
 
+using Token = size_t;
+
+namespace mreq {
+
 class ITopic {
 public:
     virtual ~ITopic() = default;
+    virtual bool check(Token token) const noexcept = 0;
+    virtual void unsubscribe(Token token) noexcept = 0;
 };
 
 // Varsayılan: Tekli buffer, Opsiyonel: Ring buffer
@@ -39,11 +45,11 @@ public:
         // subscribers.notify_publish(sequence); // Polling tabanlı olduğu için doğrudan bir bildirime gerek yok
     }
 
-    std::optional<size_t> subscribe() {
+    std::optional<Token> subscribe() {
         LockType lock(mtx); // Topic'in durumunu koru
-        std::optional<size_t> token_opt = subscribers.subscribe();
+        std::optional<Token> token_opt = subscribers.subscribe();
         if (token_opt.has_value()) {
-            size_t token = token_opt.value();
+            Token token = token_opt.value();
             size_t initial_read_idx;
             if (sequence < N) {
                 initial_read_idx = 0;
@@ -59,7 +65,7 @@ public:
     }
 
     // Abone için okunmamış en eski veriyi döndürür (ring buffer'da)
-    std::optional<T> read(size_t token) {
+    std::optional<T> read(Token token) {
         LockType lock(mtx);
         SubscriberSlot& slot = subscribers.get_slot(token);
 
@@ -92,7 +98,7 @@ public:
 
     // Çoklu Örnek Okuma (Multi-Sample Read) Desteği
     // Abone için okunmamış verileri out_buffer'a kopyalar ve okunan mesaj sayısını döndürür.
-    size_t read_multiple(size_t token, T* out_buffer, size_t count) {
+    size_t read_multiple(Token token, T* out_buffer, size_t count) {
         LockType lock(mtx);
         SubscriberSlot& slot = subscribers.get_slot(token);
         size_t messages_read = 0;
@@ -133,14 +139,14 @@ public:
         return messages_read;
     }
 
-    void unsubscribe(size_t token) noexcept {
+    void unsubscribe(Token token) noexcept override {
         subscribers.unsubscribe(token);
 #ifdef MREQ_ENABLE_LOGGING
         printf("MREQ_LOG: Subscriber %zu unsubscribed.\n", token);
 #endif
     }
 
-    bool check(size_t token) const noexcept {
+    bool check(Token token) const noexcept override {
         LockType lock(mtx);
         bool has_new_data = subscribers.check(token, sequence);
 #ifdef MREQ_ENABLE_LOGGING
@@ -149,3 +155,5 @@ public:
         return has_new_data;
     }
 };
+
+}

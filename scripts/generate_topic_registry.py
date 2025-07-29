@@ -14,13 +14,11 @@ def extract_topic_names(proto_content, message_name):
 def generate_registry_code(proto_files, output_dir):
     """Generate topic registry code from proto files."""
     os.makedirs(output_dir, exist_ok=True)
-    
-    header_path = os.path.join(output_dir, 'topic_registry_autogen.hpp')
-    impl_path = os.path.join(output_dir, 'topic_registry_autogen.cpp')
 
-    topics = []
-    include_files = set()
+    hpp_path = os.path.join(output_dir, 'topic_registry_autogen.hpp')
+    cpp_path = os.path.join(output_dir, 'topic_registry_autogen.cpp')
 
+    proto_info_list = []
     for proto_file in proto_files:
         with open(proto_file, 'r') as pf:
             content = pf.read()
@@ -28,37 +26,58 @@ def generate_registry_code(proto_files, output_dir):
             if message_match:
                 message_type = message_match.group(1)
                 topic_names = extract_topic_names(content, message_type)
-                
-                proto_name = Path(proto_file).stem
-                include_files.add(f'#include "{proto_name}.pb.h"')
+                proto_info_list.append({
+                    "file_path": proto_file,
+                    "message_type": message_type,
+                    "topic_names": topic_names
+                })
 
-                for topic_name in topic_names:
-                    topics.append({
-                        'type': message_type,
-                        'name': topic_name,
-                        'id': f'MREQ_ID({topic_name})'
-                    })
-
-    with open(header_path, 'w') as f:
+    # Generate header file
+    with open(hpp_path, 'w') as f:
         f.write("""#pragma once
 
-namespace mreq::autogen {
+#include "mreq/metadata.hpp"
+""")
+        for proto_info in proto_info_list:
+            proto_name = Path(proto_info["file_path"]).stem
+            f.write(f'#include <{proto_name}.pb.h>\n')
+        f.write("""
+namespace mreq {
+namespace autogen {
+
+""")
+        for proto_info in proto_info_list:
+            f.write(f'MREQ_METADATA_DECLARE({proto_info["message_type"]}, "{proto_info["message_type"]}")\n')
+        f.write("""
 void register_topics();
-} // namespace mreq::autogen
+
+} // namespace autogen
+} // namespace mreq
 """)
 
-    with open(impl_path, 'w') as f:
-        f.write('#include "topic_registry_autogen.hpp"\n')
-        f.write('#include "mreq/mreq.hpp"\n')
-        for include in sorted(list(include_files)):
-            f.write(f'{include}\n')
-        
-        f.write("\nnamespace mreq::autogen {\n\n")
-        f.write("void register_topics() {\n")
-        for topic in topics:
-            f.write(f'    mreq::register_topic<{topic["type"]}>({topic["id"]});\n')
-        f.write("}\n\n")
-        f.write("} // namespace mreq::autogen\n")
+    # Generate implementation file
+    with open(cpp_path, 'w') as f:
+        f.write("""#include "topic_registry_autogen.hpp"
+#include "mreq/topic_registry.hpp"
+
+namespace mreq {
+namespace autogen {
+
+""")
+        for proto_info in proto_info_list:
+            # Her mesaj tipi için sadece bir metadata instance, mesaj ismiyle.
+            f.write(f'MREQ_MESSAGE_TYPE({proto_info["message_type"]}, "{proto_info["message_type"]}")\n')
+        f.write("""
+void register_topics() {
+""")
+        for proto_info in proto_info_list:
+            for topic_name in proto_info["topic_names"]:
+                f.write(f'    REGISTER_TOPIC({proto_info["message_type"]}, "{topic_name}");\n')
+        f.write("""}
+
+} // namespace autogen
+} // namespace mreq
+""")
 
 def main():
     if len(sys.argv) < 3:

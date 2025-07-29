@@ -6,8 +6,9 @@
 
 int main() {
     std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test\n";
-    // 4 elemanlı ring buffer ile topic
-    Topic<SensorTemperature, 4> temperatureTopic;
+    
+    // Topic'i registry'den al (MREQ_ID ile otomatik üretilen registry'den)
+    auto& temperatureTopic = mreq::get_topic<SensorTemperature>(MREQ_ID(SensorTemperature)).value().get();
 
     // Maksimum abone limiti (MREQ_MAX_SUBSCRIBERS) kadar abone olalım
     std::array<std::optional<size_t>, MREQ_MAX_SUBSCRIBERS> tokens;
@@ -23,9 +24,9 @@ int main() {
     // Ring buffer'a 4 farklı mesaj yayınla
     for (int i = 0; i < 4; ++i) {
         SensorTemperature temp;
-        temp.id = 100 + i;
-        temp.temperature = 20.0f + i;
-        temp.timestamp = 1000000 + i;
+        temp.set_id(100 + i);
+        temp.set_temperature(20.0f + i);
+        temp.set_timestamp(1000000 + i);
         temperatureTopic.publish(temp);
     }
 
@@ -33,7 +34,7 @@ int main() {
     for (size_t i = 0; i < MREQ_MAX_SUBSCRIBERS; ++i) {
         auto val = temperatureTopic.read(tokens[i].value());
         assert(val);
-        std::cout << "[Multi] Abone " << i << ": id=" << val->id << ", temp=" << val->temperature << std::endl;
+        std::cout << "[Multi] Abone " << i << ": id=" << val->id() << ", temp=" << val->temperature() << std::endl;
         // Okuduktan sonra tekrar okursa veri gelmemeli
         assert(!temperatureTopic.read(tokens[i].value()));
         temperatureTopic.unsubscribe(tokens[i].value());

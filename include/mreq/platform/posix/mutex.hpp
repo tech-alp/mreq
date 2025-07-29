@@ -1,4 +1,5 @@
 #include "mreq/internal/NonCopyable.hpp"
+#include <pthread.h>
 
 namespace mreq {
 

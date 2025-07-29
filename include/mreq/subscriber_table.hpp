@@ -81,7 +81,7 @@ public:
 
     // (Slot sayısını ve durumlarını göstermek için ek)
     size_t subscriber_count() const noexcept {
-        LockType lock(mtx); // mtx artık mutable, const_cast'e gerek yok
+        LockType lock(const_cast<mreq::Mutex&>(mtx)); // const_cast needed for const method
         return std::count_if(slots.begin(), slots.end(),
             [](const SubscriberSlot& s) { return s.active; });
     }

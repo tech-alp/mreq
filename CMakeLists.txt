@@ -1,54 +1,45 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.16)
+project(mreq VERSION 1.0.0 LANGUAGES CXX)
 
-# Set C++ standard
+# C++17 standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Include cmake modules
+# Include mreq cmake modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include(PlatformConfig)
+include(MreqConfig)
 
-# Create main library
-add_library(mreq INTERFACE)
+message(WARNING ${MREQ_INCLUDE_DIRS})
 
-# Configure platform
-configure_platform(mreq)
+# Platform seçimi
+if(NOT DEFINED MREQ_PLATFORM_POSIX)
+    set(MREQ_PLATFORM_POSIX ON)
+    add_compile_definitions(MREQ_PLATFORM_POSIX)
+endif()
 
-# Configure include directories
-target_include_directories(mreq INTERFACE 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/gen>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/autogen>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/nanopb>
-    $<INSTALL_INTERFACE:include>
+# Test option
+option(MREQ_BUILD_TESTS "Build unit tests" OFF)
+
+# Include dosyalarını bul
+file(GLOB INCLUDE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/mreq/*.hpp")
+
+# Ana MREQ kütüphanesi
+add_library(mreq STATIC src/mreq.cpp ${INCLUDE_FILES})
+target_include_directories(mreq PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${MREQ_INCLUDE_DIRS}
 )
 
-# add_subdirectory(example)
+# Platform-specific libraries
+if(MREQ_PLATFORM_POSIX)
+    target_link_libraries(mreq PUBLIC pthread)
+endif()
 
-# FreeRTOS ve nanopb entegrasyonu için örnek (kendi yolunuza göre düzenleyin)
-# target_link_libraries(mreq INTERFACE freertos nanopb)
+# Test build
+if(MREQ_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
-# Install rules
-install(TARGETS mreq
-    EXPORT mreq-targets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
-)
-
-install(DIRECTORY include/
-    DESTINATION include
-    FILES_MATCHING PATTERN "*.hpp"
-)
-
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MreqConfig.cmake
-    DESTINATION lib/cmake/mreq
-)
-
-# Export targets
-install(EXPORT mreq-targets
-    FILE mreq-targets.cmake
-    NAMESPACE mreq::
-    DESTINATION lib/cmake/mreq
-)
+# Örnekler
+add_subdirectory(example)

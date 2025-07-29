@@ -5,9 +5,10 @@
 #include <functional>
 #include <type_traits>
 #include <cassert>
+#include <any>
+#include "mutex.hpp"
 #include "topic.hpp"
 #include "metadata.hpp"
-#include "mutex.hpp"
 #include "internal/LockGuard.hpp"
 #include "internal/NonCopyable.hpp"
 
@@ -21,9 +22,11 @@ namespace mreq {
 // türden bağımsız olarak yönetmesini sağlar.
 struct TopicMetadata {
     ITopic* topic_ptr;
-    std::function<std::optional<size_t>()> subscribe_fn;
-    std::function<bool(size_t)> check_fn;
-    std::function<void(size_t)> unsubscribe_fn;
+    std::function<std::optional<Token>()> subscribe_fn;
+    std::function<bool(Token)> check_fn;
+    std::function<void(Token)> unsubscribe_fn;
+    std::function<void(const void*)> publish_fn;
+    std::function<std::optional<std::any>(Token)> read_fn;
 };
 
 // Gömülü sistemler için tasarlanmış, statik bellek kullanan TopicRegistry.
@@ -80,3 +83,22 @@ public:
 };
 
 } // namespace mreq
+
+
+#define REGISTER_TOPIC(type, name) \
+    do { \
+        static mreq::Topic<type> topic_instance; \
+        mreq::TopicMetadata metadata { \
+            .topic_ptr = &topic_instance, \
+            .subscribe_fn = [&]() { return topic_instance.subscribe(); }, \
+            .check_fn = [&](Token token) { return topic_instance.check(token); }, \
+            .unsubscribe_fn = [&](Token token) { topic_instance.unsubscribe(token); }, \
+            .publish_fn = [&](const void* msg) { topic_instance.publish(*static_cast<const type*>(msg)); }, \
+            .read_fn = [&](Token token) -> std::optional<std::any> { \
+                auto msg = topic_instance.read(token); \
+                if (msg) return std::make_optional<std::any>(*msg); \
+                return std::nullopt; \
+            } \
+        }; \
+        mreq::TopicRegistry::instance().add(MREQ_ID(type), std::move(metadata)); \
+    } while (false)
