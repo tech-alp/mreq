@@ -2,21 +2,23 @@
 #include <iostream>
 #include <cassert>
 #include <sensor_temperature.pb.h>
+#include "mreq/mreq.hpp"
+#include "topic_registry_autogen.hpp"
 
 int main() {
+    using namespace mreq;
+    using namespace mreq::autogen;
+
     std::cout << "[EXAMPLE] Sequential Publish Test\n";
-    
-    // Topic'i registry'den al (MREQ_ID ile otomatik üretilen registry'den)
-    auto& temperatureTopic = mreq::get_topic<SensorTemperature>(MREQ_ID(SensorTemperature)).value().get();
-    
-    auto temperatureToken = temperatureTopic.subscribe();
+
+    auto temperatureToken = mreq::subscribe(MREQ_ID(SensorTemperature));
 
     for (int i = 0; i < 10; ++i) {
         SensorTemperature msg;
-        msg.set_id(i);
-        msg.set_temperature(i * 1.5f);
-        msg.set_timestamp(123456789 + i);
-        temperatureTopic.publish(msg);
+        msg.id = i;
+        msg.temperature = i * 1.5f;
+        msg.timestamp = (123456789 + i);
+        mreq::publish(MREQ_ID(SensorTemperature), msg);
 
         auto out = temperatureTopic.read(temperatureToken.value());
         assert(out);

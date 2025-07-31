@@ -3,20 +3,33 @@
 #include <cstdint>
 #include <functional>
 
+#include "pb.h"
+
 namespace mreq {
+
+// Forward declaration
+struct mreq_metadata;
+
+// Genel nanopb encode/decode fonksiyonları
+bool nanopb_encode_wrapper(const mreq_metadata& metadata, const void* data, void* buffer, size_t buffer_size, size_t* message_length);
+bool nanopb_decode_wrapper(const mreq_metadata& metadata, const void* buffer, size_t buffer_size, void* data);
+
 
 // nanopb uyumlu mesaj metadata yapısı
 struct mreq_metadata {
     const char* topic_name;                    // Topic adı (örn: "sensor_accel")
     size_t payload_size;                       // Mesaj payload boyutu (nanopb struct size)
     size_t message_id;                         // Benzersiz mesaj ID'si (derleme zamanında hesaplanır)
-    
-    // nanopb serialization/deserialization fonksiyon pointer'ları
-    using nanopb_encode_func_t = bool(*)(const void* data, void* buffer, size_t buffer_size, size_t* message_length);
-    using nanopb_decode_func_t = bool(*)(const void* buffer, size_t buffer_size, void* data);
-    
-    nanopb_encode_func_t nanopb_encode;        // nanopb encode fonksiyonu
-    nanopb_decode_func_t nanopb_decode;        // nanopb decode fonksiyonu
+    const pb_msgdesc_t* fields;                // nanopb mesaj tanımlayıcısı
+
+    // nanopb serialization/deserialization fonksiyonları
+    bool encode(const void* data, void* buffer, size_t buffer_size, size_t* message_length) const {
+        return nanopb_encode_wrapper(*this, data, buffer, buffer_size, message_length);
+    }
+
+    bool decode(const void* buffer, size_t buffer_size, void* data) const {
+        return nanopb_decode_wrapper(*this, buffer, buffer_size, data);
+    }
     
     // Metadata karşılaştırma için
     constexpr bool operator==(const mreq_metadata& other) const {
@@ -29,16 +42,6 @@ struct mreq_metadata {
 };
 
 // Derleme zamanında metadata oluşturmak için yardımcı fonksiyon
-template<typename T>
-constexpr mreq_metadata create_metadata(const char* name) {
-    return mreq_metadata{
-        .topic_name = name,
-        .payload_size = sizeof(T),
-        .message_id = 0, // Derleme zamanında hesaplanacak
-        .nanopb_encode = nullptr, // nanopb encode fonksiyonu
-        .nanopb_decode = nullptr  // nanopb decode fonksiyonu
-    };
-}
 
 // Mesaj ID'sini hesaplamak için hash fonksiyonu
 constexpr size_t hash_string(const char* str) {
@@ -50,35 +53,18 @@ constexpr size_t hash_string(const char* str) {
 }
 
 // Metadata oluşturma makrosu
-#define MREQ_METADATA_DECLARE(type, name) \
-    extern const mreq::mreq_metadata __mreq_##type;
+#define MREQ_METADATA_DECLARE(name) \
+    extern const mreq::mreq_metadata __mreq_##name;
 
-#define MREQ_METADATA_DEFINE(type, name) \
-    const mreq::mreq_metadata __mreq_##type = { \
-        .topic_name = name, \
+#define MREQ_METADATA_DEFINE(type, name, topic_name_str, fields_ptr) \
+    const mreq::mreq_metadata __mreq_##name = { \
+        .topic_name = topic_name_str, \
         .payload_size = sizeof(type), \
-        .message_id = mreq::hash_string(name), \
-        .nanopb_encode = nullptr, \
-        .nanopb_decode = nullptr \
+        .message_id = mreq::hash_string(topic_name_str), \
+        .fields = fields_ptr \
     };
 
 // Topic ID makrosu - metadata pointer'ını döndürür
-#define MREQ_ID(type) (&__mreq_##type)
-
-// Mesaj tipi için metadata tanımlama makrosu
-#define MREQ_MESSAGE_TYPE(type, name) \
-    MREQ_METADATA_DECLARE(type, name) \
-    MREQ_METADATA_DEFINE(type, name)
-
-// nanopb ile uyumlu metadata tanımlama makrosu
-#define MREQ_NANOPB_MESSAGE_TYPE(type, name, encode_func, decode_func) \
-    extern const mreq_metadata __mreq_##type; \
-    const mreq_metadata __mreq_##type = { \
-        .topic_name = name, \
-        .payload_size = sizeof(type), \
-        .message_id = mreq::hash_string(name), \
-        .nanopb_encode = encode_func, \
-        .nanopb_decode = decode_func \
-    };
+#define MREQ_ID(name) (&__mreq_##name)
 
 } // namespace mreq 

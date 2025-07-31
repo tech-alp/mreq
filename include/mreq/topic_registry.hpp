@@ -13,72 +13,70 @@
 #include "internal/NonCopyable.hpp"
 
 #ifndef MREQ_MAX_TOPICS
-#define MREQ_MAX_TOPICS 16 // Varsayılan maksimum topic sayısı
+#define MREQ_MAX_TOPICS 16
 #endif
+
 
 namespace mreq {
 
-// Bu yapı, TopicRegistry'nin farklı Topic<T> türlerini
-// türden bağımsız olarak yönetmesini sağlar.
-struct TopicMetadata {
-    ITopic* topic_ptr;
-    std::function<std::optional<Token>()> subscribe_fn;
-    std::function<bool(Token)> check_fn;
-    std::function<void(Token)> unsubscribe_fn;
-    std::function<void(const void*)> publish_fn;
-    std::function<std::optional<std::any>(Token)> read_fn;
-};
-
-// Gömülü sistemler için tasarlanmış, statik bellek kullanan TopicRegistry.
-// Dinamik bellek ayırımından (heap) kaçınır.
 class TopicRegistry : private internal::NonCopyable {
 private:
-    // Her topic için gerekli meta verileri ve type-erased fonksiyonları saklar.
-    std::array<TopicMetadata, MREQ_MAX_TOPICS> topic_slots_{};
-    // Her slotun metadata ID'sini saklar.
-    std::array<const mreq_metadata*, MREQ_MAX_TOPICS> metadata_ptrs_{};
-    size_t topic_count_ = 0;
+    std::array<const mreq_metadata*, MREQ_MAX_TOPICS> metadata_ids_{};
+    std::array<ITopic*, MREQ_MAX_TOPICS> topic_ptrs_{};
+    uint8_t topic_count_ = 0;
     mutable mreq::Mutex mtx_{};
-
-    using LockType = mreq::LockGuard<mreq::Mutex>;
-
+    
     TopicRegistry() = default;
 
 public:
-    static TopicRegistry& instance() {
+    static TopicRegistry& instance() noexcept {
         static TopicRegistry inst;
         return inst;
     }
-
-    // ID ile bir TopicMetadata bulur.
-    TopicMetadata* find(const mreq_metadata* id) {
-        LockType lock(mtx_);
-        for (size_t i = 0; i < topic_count_; ++i) {
-            if (metadata_ptrs_[i] == id) {
-                return &topic_slots_[i];
+    
+    // Hot path - inline for maximum performance
+    ITopic* find(const mreq_metadata* id) noexcept {
+        mreq::LockGuard<mreq::Mutex> lock(mtx_);
+        
+        // Linear search - optimal for small arrays in embedded systems
+        for (uint8_t i = 0; i < topic_count_; ++i) {
+            if (metadata_ids_[i] == id) {
+                return topic_ptrs_[i];
             }
         }
         return nullptr;
     }
-
-    // Yeni bir Topic'i ve metadata'sını registry'e ekler.
-    void add(const mreq_metadata* id, TopicMetadata&& metadata) {
-        LockType lock(mtx_);
+    
+    bool add(const mreq_metadata* id, ITopic* topic_ptr) noexcept {
+        mreq::LockGuard<mreq::Mutex> lock(mtx_);
+        
         if (topic_count_ >= MREQ_MAX_TOPICS) {
-            assert(false && "MREQ: Maksimum topic sayısına ulaşıldı!");
-            return;
+            return false;
         }
-
-        // Zaten eklenmiş mi diye kontrol et
-        for (size_t i = 0; i < topic_count_; ++i) {
-            if (metadata_ptrs_[i] == id) {
-                return; // Zaten var, tekrar ekleme.
+        
+        // Duplicate check
+        for (uint8_t i = 0; i < topic_count_; ++i) {
+            if (metadata_ids_[i] == id) {
+                return false;  // Already exists
             }
         }
-
-        metadata_ptrs_[topic_count_] = id;
-        topic_slots_[topic_count_] = std::move(metadata);
-        topic_count_++;
+        
+        metadata_ids_[topic_count_] = id;
+        topic_ptrs_[topic_count_] = std::move(topic_ptr);
+        ++topic_count_;
+        return true;
+    }
+    
+    // Utility functions
+    uint8_t size() const noexcept { return topic_count_; }
+    bool full() const noexcept { return topic_count_ >= MREQ_MAX_TOPICS; }
+    
+    // For debugging/monitoring
+    void clear() noexcept {
+        mreq::LockGuard<mreq::Mutex> lock(mtx_);
+        topic_count_ = 0;
+        metadata_ids_.fill(nullptr);
+        topic_ptrs_.fill(nullptr);
     }
 };
 
@@ -86,19 +84,13 @@ public:
 
 
 #define REGISTER_TOPIC(type, name) \
-    do { \
-        static mreq::Topic<type> topic_instance; \
-        mreq::TopicMetadata metadata { \
-            .topic_ptr = &topic_instance, \
-            .subscribe_fn = [&]() { return topic_instance.subscribe(); }, \
-            .check_fn = [&](Token token) { return topic_instance.check(token); }, \
-            .unsubscribe_fn = [&](Token token) { topic_instance.unsubscribe(token); }, \
-            .publish_fn = [&](const void* msg) { topic_instance.publish(*static_cast<const type*>(msg)); }, \
-            .read_fn = [&](Token token) -> std::optional<std::any> { \
-                auto msg = topic_instance.read(token); \
-                if (msg) return std::make_optional<std::any>(*msg); \
-                return std::nullopt; \
-            } \
-        }; \
-        mreq::TopicRegistry::instance().add(MREQ_ID(type), std::move(metadata)); \
-    } while (false)
+    REGISTER_TOPIC_WITH_BUFFER(type, name, 1)
+
+#define REGISTER_TOPIC_WITH_BUFFER(type, name, buffer_size) \
+do { \
+    static mreq::Topic<type, buffer_size> topic_instance_##name; \
+    [[maybe_unused]] bool success = mreq::TopicRegistry::instance().add( \
+        MREQ_ID(name), &topic_instance_##name); \
+    assert(success && "Topic registry full or duplicate registration"); \
+} while (false)
+

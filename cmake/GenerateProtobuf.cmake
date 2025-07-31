@@ -50,14 +50,16 @@ function(generate_protobuf_configure_time PROTO_FILES)
         endif()
         
         # Generate edilen dosyaları listeye ekle
-        list(APPEND GENERATED_FILES ${PB_H_FILE} ${PB_C_FILE})
+        list(APPEND GENERATED_INCLUDE_FILES ${PB_H_FILE})
+        list(APPEND GENERATED_SOURCE_FILES ${PB_C_FILE})
         
         # Proto dosyasında değişiklik olduğunda yeniden configure et
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PROTO})
     endforeach()
     
     # Generated dosyaları parent scope'a döndür
-    set(PROTOBUF_GENERATED_FILES ${GENERATED_FILES} PARENT_SCOPE)
+    set(PROTOBUF_GENERATED_INCLUDE_FILES ${GENERATED_INCLUDE_FILES} PARENT_SCOPE)
+    set(PROTOBUF_GENERATED_SOURCE_FILES ${GENERATED_SOURCE_FILES} PARENT_SCOPE)
     set(PROTOBUF_INCLUDE_DIR ${GEN_DIR} PARENT_SCOPE)
 endfunction()
 

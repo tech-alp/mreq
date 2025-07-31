@@ -4,12 +4,16 @@ import re
 import sys
 from pathlib import Path
 
-def extract_topic_names(proto_content, message_name):
-    """Extract topic names from proto file comments or use message name."""
+def extract_topic_names(proto_content, proto_filename):
+    """Extract topic names from proto file comments or use proto file name."""
     topic_comment = re.search(r'//\s*@topic\s*:\s*([^\n]+)', proto_content)
     if topic_comment:
         return topic_comment.group(1).strip().split()
-    return [message_name]
+    return [Path(proto_filename).stem]
+
+def sanitize_for_identifier(name):
+    """Replace any character that is not a letter, number, or underscore with an underscore."""
+    return re.sub(r'[^a-zA-Z0-9_]', '_', name)
 
 def generate_registry_code(proto_files, output_dir):
     """Generate topic registry code from proto files."""
@@ -25,7 +29,7 @@ def generate_registry_code(proto_files, output_dir):
             message_match = re.search(r'message\s+(\w+)', content)
             if message_match:
                 message_type = message_match.group(1)
-                topic_names = extract_topic_names(content, message_type)
+                topic_names = extract_topic_names(content, proto_file)
                 proto_info_list.append({
                     "file_path": proto_file,
                     "message_type": message_type,
@@ -47,7 +51,9 @@ namespace autogen {
 
 """)
         for proto_info in proto_info_list:
-            f.write(f'MREQ_METADATA_DECLARE({proto_info["message_type"]}, "{proto_info["message_type"]}")\n')
+            for topic_name in proto_info["topic_names"]:
+                sanitized_name = sanitize_for_identifier(topic_name)
+                f.write(f'MREQ_METADATA_DECLARE({sanitized_name});\n')
         f.write("""
 void register_topics();
 
@@ -65,14 +71,16 @@ namespace autogen {
 
 """)
         for proto_info in proto_info_list:
-            # Her mesaj tipi için sadece bir metadata instance, mesaj ismiyle.
-            f.write(f'MREQ_MESSAGE_TYPE({proto_info["message_type"]}, "{proto_info["message_type"]}")\n')
+            for topic_name in proto_info["topic_names"]:
+                sanitized_name = sanitize_for_identifier(topic_name)
+                f.write(f'MREQ_METADATA_DEFINE({proto_info["message_type"]}, {sanitized_name}, "{topic_name}", {proto_info["message_type"]}_fields)\n')
         f.write("""
 void register_topics() {
 """)
         for proto_info in proto_info_list:
             for topic_name in proto_info["topic_names"]:
-                f.write(f'    REGISTER_TOPIC({proto_info["message_type"]}, "{topic_name}");\n')
+                sanitized_name = sanitize_for_identifier(topic_name)
+                f.write(f'    REGISTER_TOPIC({proto_info["message_type"]}, {sanitized_name});\n')
         f.write("""}
 
 } // namespace autogen

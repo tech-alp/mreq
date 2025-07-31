@@ -18,10 +18,8 @@ public:
     virtual ~ITopic() = default;
     virtual bool check(Token token) const noexcept = 0;
     virtual void unsubscribe(Token token) noexcept = 0;
+    virtual std::optional<Token> subscribe() = 0;
 };
-
-// Varsayılan: Tekli buffer, Opsiyonel: Ring buffer
-// N=1: klasik, N>1: ring buffer
 
 template<typename T, size_t N = 1>
 class Topic : public ITopic {
@@ -45,7 +43,7 @@ public:
         // subscribers.notify_publish(sequence); // Polling tabanlı olduğu için doğrudan bir bildirime gerek yok
     }
 
-    std::optional<Token> subscribe() {
+    std::optional<Token> subscribe() override {
         LockType lock(mtx); // Topic'in durumunu koru
         std::optional<Token> token_opt = subscribers.subscribe();
         if (token_opt.has_value()) {
