@@ -1,41 +1,46 @@
-#include <optional>
 #include <iostream>
+#include <thread>
+#include <vector>
 #include <cassert>
-#include <sensor_temperature.pb.h>
 #include "mreq/mreq.hpp"
+#include "sensor_temperature.pb.h"
 #include "topic_registry_autogen.hpp"
 
 int main() {
-    std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test\n";
-    
     using namespace mreq::autogen;
-    
-    mreq::init();
-    mreq::autogen::register_topics();
 
-    // Topic'i registry'den al (MREQ_ID ile otomatik üretilen registry'den)
-    auto token = mreq::subscribe(MREQ_ID(sensor_temperature));
-    assert(token);
+    std::cout << "[EXAMPLE] Multi-Subscriber Example\n";
 
-    // Maksimum abone limiti (MREQ_MAX_SUBSCRIBERS) kadar abone olalım
-    // Ring buffer'a 4 farklı mesaj yayınla
-    for (int i = 0; i < 4; ++i) {
-        SensorTemperature temp = {};
-        temp.id = 100 + i;
-        temp.temperature = 20.0f + i;
-        temp.timestamp = 1000000 + i;
-        mreq::publish(MREQ_ID(sensor_temperature), temp);
+    auto token = MREQ_SUBSCRIBE(sensor_temperature);
+    if (!token) {
+        std::cerr << "Failed to subscribe to topic." << std::endl;
+        return 1;
     }
 
-    // Her abone en güncel veriyi okuyabilir
-    if (mreq::check(MREQ_ID(sensor_temperature), *token)) {
-        auto val = mreq::read<SensorTemperature>(MREQ_ID(sensor_temperature), *token);
-        assert(val);
-        std::cout << "[Multi] Abone: id=" << val->id << ", temp=" << val->temperature << std::endl;
-        // Okuduktan sonra tekrar okursa veri gelmemeli
-        assert(!mreq::read<SensorTemperature>(MREQ_ID(sensor_temperature), *token));
-    }
-    mreq::unsubscribe(MREQ_ID(sensor_temperature), *token);
-    std::cout << "[EXAMPLE] Multi-Subscriber & Ring Buffer Test completed successfully.\n";
+    std::thread publisher_thread([]() {
+        for (int i = 0; i < 5; ++i) {
+            SensorTemperature temp = {i, 25.0f + i, 0};
+            MREQ_PUBLISH(sensor_temperature, temp);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
+
+    std::thread subscriber_thread([&]() {
+        for (int i = 0; i < 5; ++i) {
+            if (MREQ_CHECK(sensor_temperature, *token)) {
+                auto val = MREQ_READ(sensor_temperature, *token);
+                assert(val);
+                std::cout << "Subscriber received: " << val->temperature << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        }
+        MREQ_UNSUBSCRIBE(sensor_temperature, *token);
+    });
+
+    publisher_thread.join();
+    subscriber_thread.join();
+
+    std::cout << "[EXAMPLE] Multi-Subscriber Example completed successfully.\n";
+
     return 0;
-} 
+}

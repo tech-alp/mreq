@@ -8,11 +8,7 @@ int main() {
     std::cout << "[EXAMPLE] Multi Topic Example SensorBaro Test\n";
     
     using namespace mreq::autogen;
-
-    // Kütüphaneyi başlat ve topicleri kaydet
-    mreq::init();
-    mreq::autogen::register_topics();
-
+    
     // "sensor_baro" topic'ine abone ol
     auto token_raw = mreq::subscribe(MREQ_ID(sensor_baro));
     if (!token_raw) {

@@ -9,8 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(MreqConfig)
 
-message(WARNING ${MREQ_INCLUDE_DIRS})
-
 # Platform seçimi
 if(NOT DEFINED MREQ_PLATFORM_POSIX)
     set(MREQ_PLATFORM_POSIX ON)
@@ -32,7 +30,7 @@ set(NANOPB_SOURCES
 
 #
 # Ana MREQ kütüphanesi
-add_library(mreq STATIC src/mreq.cpp ${NANOPB_SOURCES})
+add_library(mreq STATIC ${NANOPB_SOURCES})
 set_source_files_properties(${NANOPB_SOURCES} PROPERTIES LANGUAGE C)
 set_target_properties(mreq PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(mreq PUBLIC
