@@ -90,7 +90,7 @@ namespace autogen {
                 
                 f.write(f'// Topic: {topic_name}\n')
                 f.write(f'REGISTER_TOPIC_WITH_BUFFER({message_type}, {sanitized_name}, {buffer_size});\n')
-                f.write(f'MREQ_METADATA_DEFINE({message_type}, {sanitized_name}, {buffer_size});\n\n')
+                f.write(f'MREQ_NANOPB_METADATA_DEFINE({message_type}, {sanitized_name}, {buffer_size});\n\n')
 
         f.write("""} // namespace autogen
 } // namespace mreq

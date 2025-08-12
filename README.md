@@ -32,12 +32,13 @@ make
 
 ## 🎯 Hızlı Başlangıç
 
-### 1. Mesaj Yapılarını Tanımlayın
+### 1. Mesaj ve Topic Tanımlayın
+
+Önce mesaj yapısını ve metadata'sını tanımlayın. Ardından `MREQ_TOPIC_DEFINE` makrosu ile topic'i oluşturun. Bu makro, topic'i otomatik olarak registry'ye kaydeder.
 
 ```cpp
+// messages.hpp
 #include "mreq/mreq.hpp"
-
-namespace mreq {
 
 struct SensorData {
     float temperature;
@@ -45,49 +46,55 @@ struct SensorData {
     uint64_t timestamp;
 };
 
-// Metadata tanımları
+// Metadata ve Topic tanımı
 MREQ_MESSAGE_TYPE(SensorData, "sensor_data");
-
-} // namespace mreq
+MREQ_TOPIC_DEFINE(SensorData, sensor_data, 1); // 1 elemanlı buffer
 ```
 
-### 2. Topic'i Registry'ye Kaydedin
+### 2. Topic'e Erişin ve Abone Olun
+
+Topic'e erişmek için `_topic_instance` sonekli değişkeni kullanın ve abone olmak için `subscribe()` metodunu çağırın.
 
 ```cpp
-// Topic'i registry'ye kaydet
-auto& sensor_topic = mreq::register_topic<mreq::SensorData>(MREQ_ID(SensorData));
-```
+// main.cpp
+#include "messages.hpp"
+#include <iostream>
 
-### 3. Abone Olun (Polling için Token Alın)
+// Topic'e erişim (otomatik olarak oluşturulur)
+extern mreq::Topic<SensorData, 1> sensor_data_topic_instance;
 
-```cpp
 // Abone ol ve polling token'ı al
-auto token = sensor_topic.subscribe();
-if (!token) {
-    // Abone olamadı
-    return;
+auto token_opt = sensor_data_topic_instance.subscribe();
+if (!token_opt) {
+    // Abone olunamadı
+    return -1;
 }
+auto token = token_opt.value();
 ```
 
-### 4. Mesaj Yayınlayın
+### 3. Mesaj Yayınlayın
+
+`publish()` metodu ile mesaj yayınlayın.
 
 ```cpp
-mreq::SensorData sensor_msg{
+SensorData sensor_msg{
     .temperature = 25.5f,
     .humidity = 60.0f,
     .timestamp = 1234567890
 };
 
-sensor_topic.publish(&sensor_msg);
+sensor_data_topic_instance.publish(sensor_msg);
 ```
 
-### 5. Polling ile Mesaj Okuyun
+### 4. Polling ile Mesaj Okuyun
+
+`check()` ile yeni mesaj olup olmadığını kontrol edin ve `read()` ile mesajı okuyun. `read()` metodu `std::optional<SensorData>` döndürür.
 
 ```cpp
 // Polling ile yeni mesaj kontrol et
-if (sensor_topic.check(token.value())) {
-    mreq::SensorData received_data;
-    if (sensor_topic.read(token.value(), &received_data)) {
+if (sensor_data_topic_instance.check(token)) {
+    if (auto msg_opt = sensor_data_topic_instance.read(token)) {
+        const auto& received_data = msg_opt.value();
         std::cout << "Sıcaklık: " << received_data.temperature << "°C" << std::endl;
     }
 }
@@ -95,45 +102,48 @@ if (sensor_topic.check(token.value())) {
 
 ## 🔧 API Referansı
 
-### Mesaj Tanımlama
+### Mesaj ve Topic Tanımlama
 
 ```cpp
-// Mesaj yapısı tanımlayın
-struct MyMessage {
-    // ... mesaj alanları
-};
+// Mesaj yapısını tanımlayın
+struct MyMessage { /* ... */ };
 
-// Metadata tanımlayın
+// Mesaj için metadata oluşturun
 MREQ_MESSAGE_TYPE(MyMessage, "my_message");
+
+// Topic'i 10 elemanlı bir buffer ile tanımlayın ve kaydedin
+MREQ_TOPIC_DEFINE(MyMessage, my_message, 10);
+
+// Başka bir dosyada topic'i kullanmak için bildirin
+MREQ_TOPIC_DECLARE(MyMessage, my_message, 10);
 ```
 
-### Topic Registry
+### Topic Erişimi ve Kullanımı
+
+Topic'ler `_topic_instance` sonekiyle doğrudan erişilebilen statik nesnelerdir.
 
 ```cpp
-// Topic'i registry'ye kaydet
-auto& topic = mreq::register_topic<MyMessage>(MREQ_ID(MyMessage));
+// Topic'e erişim
+extern mreq::Topic<MyMessage, 10> my_message_topic_instance;
 
-// Topic'i registry'den al
-auto topic_opt = mreq::get_topic<MyMessage>(MREQ_ID(MyMessage));
-```
-
-### Polling API
-
-```cpp
 // Abone ol (token al)
-std::optional<size_t> subscribe();
+std::optional<Token> token_opt = my_message_topic_instance.subscribe();
+Token token = token_opt.value();
 
 // Mesaj yayınla
-void publish(const void* data);
+MyMessage msg = { /* ... */ };
+my_message_topic_instance.publish(msg);
 
 // Yeni mesaj var mı kontrol et
-bool check(size_t token) const noexcept;
+bool new_message = my_message_topic_instance.check(token);
 
-// Mesaj oku
-bool read(size_t token, void* data) const;
+// Mesaj oku (std::optional<MyMessage> döner)
+if (auto msg_opt = my_message_topic_instance.read(token)) {
+    // ... mesajı kullan
+}
 
 // Aboneliği iptal et
-void unsubscribe(size_t token) noexcept;
+my_message_topic_instance.unsubscribe(token);
 ```
 
 ## 📁 Proje Yapısı

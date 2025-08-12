@@ -139,11 +139,11 @@ inline bool nanopb_decode_wrapper(const mreq_metadata& metadata, const void* buf
 #define MREQ_METADATA_DECLARE(name) \
     extern const mreq::mreq_metadata __mreq_##name;
 
-#define MREQ_METADATA_DEFINE(type, name, buffer_size) \
+#define MREQ_NANOPB_METADATA_DEFINE(type, name, buffer_size) \
     const mreq::mreq_metadata __mreq_##name = { \
         #name, \
         sizeof(type), \
-        constexpr_hash(#name), \
+        mreq::constexpr_hash(#name), \
         type##_fields, \
         &name##_topic_instance, \
         mreq::Topic<type, buffer_size>::static_subscribe, \
@@ -152,4 +152,19 @@ inline bool nanopb_decode_wrapper(const mreq_metadata& metadata, const void* buf
         mreq::Topic<type, buffer_size>::static_publish, \
         mreq::Topic<type, buffer_size>::static_read, \
         mreq::Topic<type, buffer_size>::static_read_multiple \
+    };
+
+#define MREQ_METADATA_DEFINE(type, name, buffer_size) \
+    const mreq::mreq_metadata __mreq_##name = { \
+        #name, \
+        sizeof(type), \
+        mreq::constexpr_hash(#name), \
+        nullptr, \
+        &name##_topic_instance, \
+        nullptr, \
+        nullptr, \
+        nullptr, \
+        nullptr, \
+        nullptr, \
+        nullptr \
     };
