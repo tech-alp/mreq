@@ -1,25 +1,20 @@
-# Find Python interpreter
-find_package(Python3 REQUIRED)
+# Function to generate topic registry code at configure time (ESP için)
 function(generate_topic_registry_configure_time PROTO_FILES OUTPUT_DIR)
-    # Create output directory
-    # file(MAKE_DIRECTORY ${OUTPUT_DIR})
-    
-    # Create semicolon-separated list of proto files
-    string(REPLACE " " ";" PROTO_LIST "${PROTO_FILES}")
-    
-    # Execute Python script at configure time
+    # Execute Python script immediately (configure-time)
     execute_process(
         COMMAND ${Python3_EXECUTABLE}
-            ${PROJECT_DIR}/mreq/scripts/generate_topic_registry.py
-            ${PROTO_LIST}
+            ${COMPONENT_DIR}/mreq/scripts/generate_topic_registry.py
+            ${PROTO_FILES}
             ${OUTPUT_DIR}
         RESULT_VARIABLE RESULT
         OUTPUT_VARIABLE OUTPUT
         ERROR_VARIABLE ERROR
     )
-    
-    
-    message(STATUS "Topic registry generated successfully")
+    if(RESULT EQUAL 0)
+        message(STATUS "Topic registry generated successfully at configure time")
+    else()
+        message(FATAL_ERROR "Failed to generate topic registry at configure time:\n${ERROR}")
+    endif()
 endfunction()
 
 # Function to generate topic registry code

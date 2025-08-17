@@ -30,12 +30,6 @@ function(configure_platform TARGET)
     elseif(MREQ_USE_FREERTOS)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_FREERTOS)
         message(STATUS "Using FreeRTOS platform")
-        # Add FreeRTOS include directories
-        set(FREERTOS_KERNEL_PATH "$ENV{IDF_PATH}/components/freertos/FreeRTOS-Kernel")
-        target_include_directories(${TARGET} INTERFACE
-            $<BUILD_INTERFACE:${FREERTOS_KERNEL_PATH}/include>
-            $<BUILD_INTERFACE:${FREERTOS_KERNEL_PATH}/portable/xtensa/include>
-        )
     elseif(MREQ_USE_POSIX)
         target_compile_definitions(${TARGET} INTERFACE MREQ_PLATFORM_POSIX)
         message(STATUS "Using POSIX platform")

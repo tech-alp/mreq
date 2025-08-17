@@ -8,12 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include mreq cmake modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(MreqConfig)
-
-# Platform seçimi
-if(NOT DEFINED MREQ_PLATFORM_POSIX)
-    set(MREQ_PLATFORM_POSIX ON)
-    add_compile_definitions(MREQ_PLATFORM_POSIX)
-endif()
+include(PlatformConfig)
 
 # Test option
 option(MREQ_BUILD_TESTS "Build unit tests" OFF)
@@ -51,4 +46,6 @@ if(MREQ_BUILD_TESTS)
 endif()
 
 # Örnekler
-add_subdirectory(example)
+if(MREQ_BUILD_EXAMPLES)
+    add_subdirectory(example)
+endif()
